@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TiketFest - Sistem Penjualan Tiket Online</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- LIBRARY QR CODE GENERATOR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root { --primary-color: #4f46e5; --primary-hover: #4338ca; }
+    body { background-color: #f8fafc; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
+    .btn-primary:hover { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+    .navbar-brand { font-weight: 700; letter-spacing: -0.5px; color: var(--primary-color) !important; }
+    .card-event { transition: transform 0.2s ease, box-shadow 0.2s ease; border: none; border-radius: 12px; }
+    .card-event:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.1) !important; }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+    .badge-status { font-weight: 500; padding: 6px 12px; border-radius: 20px; }
+    #sync-badge { font-size: 0.75rem; }
+    #sync-badge.online { color: #16a34a; }
+    #sync-badge.offline { color: #dc2626; }
+
+    /* LAYAR LOGIN UTAMA APLIKASI */
+    #app-auth-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #f8fafc; z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    @media (max-width: 767.98px) {
+      .responsive-table thead { display: none; }
+      .responsive-table tbody tr { display: block; margin-bottom: 1rem; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+      .responsive-table tbody td { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 !important; border: none !important; border-bottom: 1px dashed #f1f5f9 !important; font-size: 0.9rem; }
+      .responsive-table tbody td:last-child { border-bottom: none !important; padding-top: 10px !important; }
+      .responsive-table tbody td::before { content: attr(data-label); font-weight: 600; color: #64748b; margin-right: 15px; text-align: left; }
+      .responsive-table tbody td.td-actions { justify-content: flex-end; }
+      .responsive-table tbody td.td-actions::before { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- OVERLAY LOGIN UTAMA APLIKASI -->
+  <div id="app-auth-overlay">
+    <div class="col-11 col-sm-8 col-md-5 col-lg-4">
+      <div class="card border-0 shadow-lg rounded-4">
+        <div class="card-body p-4 p-md-5 text-center">
+          <i class="bi bi-ticket-perforated-fill fs-1 text-primary mb-2 d-inline-block"></i>
+          <h4 class="fw-bold mb-1">Akses Aplikasi TiketFest</h4>
+          <p class="text-muted small mb-4">Masukkan Username & Password untuk masuk</p>
+          <form onsubmit="handleAppLogin(event)">
+            <div class="mb-3 text-start">
+              <label class="form-label small fw-bold">Username</label>
+              <input type="text" class="form-control" id="app-username" placeholder="Masukkan Username" required>
+            </div>
+            <div class="mb-2 text-start">
+              <label class="form-label small fw-bold">Password</label>
+              <input type="password" class="form-control" id="app-password" placeholder="Masukkan Password" required>
+            </div>
+            <!-- TULISAN USERNAME DAN PASSWORD DI PALING BAWAH TULISAN PASSWORD -->
+            <div class="text-start mb-4">
+              <small class="text-muted d-block" style="font-size: 0.8rem;">
+                <strong>Username:</strong> RIYANA FEBBIYANI<br>
+                <strong>Password:</strong> RIYANAXI(RPL)
+              </small>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 fw-bold">Masuk Aplikasi</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="#" onclick="navigateTo('beranda-page')">
+        <i class="bi bi-ticket-perforated-fill fs-3 text-primary"></i>
+        <span>TiketFest</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-menu navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+          <li class="nav-item"><a class="nav-link active" id="nav-beranda" href="#" onclick="navigateTo('beranda-page')">Beranda Event</a></li>
+          <li class="nav-item"><a class="nav-link" id="nav-riwayat" href="#" onclick="navigateTo('riwayat-page')">Riwayat Pesanan</a></li>
+        </ul>
+        <div class="d-flex align-items-center gap-3">
+          <span id="sync-badge" class="d-none d-md-inline"><i class="bi bi-arrow-repeat"></i> Menyinkronkan...</span>
+          <div class="d-flex align-items-center gap-3" id="user-nav-section"></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container my-4">
+
+    <!-- 1. HALAMAN LOGIN / REGISTER AKUN USER -->
+    <section id="login-page" class="page-section">
+      <div class="row justify-content-center my-4 my-md-5">
+        <div class="col-12 col-sm-10 col-md-6 col-lg-5">
+          <div class="card border-0 shadow-lg rounded-4">
+            <div class="card-body p-4 p-md-5">
+              <ul class="nav nav-pills nav-justified mb-4" id="authTab" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link active rounded-pill" id="pills-login-tab" data-bs-toggle="pill" data-bs-target="#pills-login" type="button">Masuk</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link rounded-pill" id="pills-register-tab" data-bs-toggle="pill" data-bs-target="#pills-register" type="button">Daftar</button></li>
+              </ul>
+              <div class="tab-content" id="authTabContent">
+                <div class="tab-pane fade show active" id="pills-login" role="tabpanel">
+                  <form id="form-login" onsubmit="handleLogin(event)">
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold">Email / No. HP</label>
+                      <input type="email" class="form-control" id="login-email" placeholder="nama@email.com" required value="budi@gmail.com">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold">Kata Sandi</label>
+                      <input type="password" class="form-control" id="login-password" placeholder="******" required value="123456">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 mt-2">Masuk Akun</button>
+                  </form>
+                </div>
+                <div class="tab-pane fade" id="pills-register" role="tabpanel">
+                  <form id="form-register" onsubmit="handleRegister(event)">
+                    <div class="mb-3"><label class="form-label small fw-bold">Nama Lengkap</label><input type="text" class="form-control" id="reg-nama" required placeholder="Sesuai KTP"></div>
+                    <div class="mb-3"><label class="form-label small fw-bold">Email</label><input type="email" class="form-control" id="reg-email" required placeholder="nama@email.com"></div>
+                    <div class="mb-3"><label class="form-label small fw-bold">Nomor HP / WhatsApp</label><input type="tel" class="form-control" id="reg-hp" required placeholder="08123456789"></div>
+                    <div class="mb-3"><label class="form-label small fw-bold">Kata Sandi</label><input type="password" class="form-control" id="reg-password" required placeholder="Minimal 6 karakter"></div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 mt-2">Daftar Sekarang</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. HALAMAN BERANDA / DAFTAR EVENT -->
+    <section id="beranda-page" class="page-section active">
+      <div class="bg-primary text-white p-4 p-md-5 rounded-4 mb-4 shadow-sm" style="background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);">
+        <div class="row align-items-center">
+          <div class="col-md-7">
+            <h1 class="fw-bold fs-2 fs-md-1">Temukan Konser & Event Favoritmu</h1>
+            <p class="lead opacity-75 fs-6 fs-md-5">Beli tiket resmi dengan mudah, cepat, dan terpercaya.</p>
+          </div>
+          <div class="col-md-5 mt-3 mt-md-0">
+            <div class="input-group input-group-lg">
+              <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" id="search-event" class="form-control border-0 fs-6" placeholder="Cari nama event..." onkeyup="filterEvents()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0 fs-5 fs-md-4">Event Mendatang</h4>
+        <span class="text-muted small" id="count-event">0 Event Tersedia</span>
+      </div>
+
+      <div class="row g-3 g-md-4" id="event-grid-list"></div>
+    </section>
+
+    <!-- 3. HALAMAN DETAIL EVENT & PILIH TIKET -->
+    <section id="detail-page" class="page-section">
+      <button class="btn btn-outline-secondary mb-3 btn-sm rounded-pill px-3" onclick="navigateTo('beranda-page')">
+        <i class="bi bi-arrow-left"></i> Kembali ke Daftar Event
+      </button>
+      <div class="row g-4" id="detail-event-wrapper"></div>
+    </section>
+
+    <!-- 4. HALAMAN RIWAYAT PESANAN -->
+    <section id="riwayat-page" class="page-section">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-white py-3 border-0">
+          <div class="row align-items-center g-2">
+            <div class="col-md-6"><h4 class="fw-bold mb-0 fs-5 fs-md-4">Riwayat Pesanan Tiket</h4></div>
+            <div class="col-md-6">
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-riwayat" class="form-control bg-light" placeholder="Cari ID / Event / Email..." onkeyup="filterRiwayat()">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0 p-md-2">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 responsive-table">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-3">ID Pesanan</th><th>Detail Event</th><th>ID Tiket & Kategori</th>
+                  <th>Pemesan (Email & HP)</th><th>Tgl Pesan</th><th>Total</th><th>Status</th><th class="text-end pe-3">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="table-riwayat-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL PEMESANAN TIKET -->
+  <div class="modal fade" id="modalPemesanan" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0">
+        <div class="modal-header border-bottom-0">
+          <h5 class="modal-title fw-bold">Form Pemesanan Tiket</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-pesan-tiket" onsubmit="prosesPemesanan(event)">
+            <input type="hidden" id="order-id-event">
+            <input type="hidden" id="order-id-tiket">
+            <div class="p-3 bg-light rounded-3 mb-3">
+              <h6 class="fw-bold mb-1" id="order-nama-event">Nama Event</h6>
+              <div class="text-muted small" id="order-jenis-tiket">Jenis Tiket</div>
+              <div class="text-primary fw-bold mt-1" id="order-harga-satuan">Rp 0</div>
+            </div>
+            <div class="mb-3"><label class="form-label small fw-bold">Nama Pemesan</label><input type="text" class="form-control" id="order-nama-pemesan" required></div>
+            <div class="mb-3"><label class="form-label small fw-bold">Email</label><input type="email" class="form-control" id="order-email" required></div>
+            <div class="mb-3"><label class="form-label small fw-bold">Nomor HP (WhatsApp)</label><input type="tel" class="form-control" id="order-hp" required></div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Jumlah Tiket</label>
+              <input type="number" class="form-control" id="order-jumlah" min="1" max="10" value="1" oninput="hitungTotalPesan()" required>
+              <div class="form-text">Maksimal pemesanan per transaksi: 10 tiket</div>
+            </div>
+            <hr class="my-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="fw-bold">Total Pembayaran</span>
+              <span class="fs-5 fw-bold text-primary" id="order-total-harga">Rp 0</span>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 fw-bold">
+              <i class="bi bi-credit-card me-1"></i> Konfirmasi & Pesan
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DETAIL PESANAN & PEMBAYARAN -->
+  <div class="modal fade" id="modalDetailPesanan" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0">
+        <div class="modal-header border-bottom-0">
+          <h5 class="modal-title fw-bold">Detail Tiket Pesanan</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detail-pesanan-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+    <div id="appToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body d-flex align-items-center gap-2" id="toast-message">
+          <i class="bi bi-check-circle-fill text-success fs-5"></i><span>Notifikasi berhasil!</span>
+        </div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyVLZKxKtUUZr6IpH-MctjyPOrZAjRpEFG0Q5YviJXYdzMx9zuMjXHBOCC9YG0jIH4O/exec";
+    const SYNC_INTERVAL_MS = 15000;
+
+    // CREDENTIAL APLIKASI
+    const APP_USER = "RIYANA FEBBIYANI";
+    const APP_PASS = "RIYANAXI(RPL)";
+
+    function handleAppLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('app-username').value.trim();
+      const p = document.getElementById('app-password').value.trim();
+
+      if (u === APP_USER && p === APP_PASS) {
+        document.getElementById('app-auth-overlay').style.display = 'none';
+        sessionStorage.setItem('app_logged_in', 'true');
+        showToast("Login aplikasi berhasil!");
+      } else {
+        alert("Username atau Password Salah!");
+      }
+    }
+
+    async function fetchAPI(action, payload = {}) {
+      if (!API_URL || API_URL.includes('URL_APPS_SCRIPT_SAYA')) {
+        return { success: false, isFallback: true };
+      }
+      try {
+        setSyncBadge('syncing');
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, ...payload })
+        });
+        const data = await response.json();
+        setSyncBadge(data.success ? 'online' : 'offline');
+        return data;
+      } catch (error) {
+        console.error("Gagal menghubungi server:", error);
+        setSyncBadge('offline');
+        return { success: false, error: error.message };
+      }
+    }
+
+    function setSyncBadge(state) {
+      const el = document.getElementById('sync-badge');
+      if (!el) return;
+      el.classList.remove('online', 'offline');
+      if (state === 'syncing') el.innerHTML = '<i class="bi bi-arrow-repeat"></i> Menyinkronkan...';
+      else if (state === 'online') { el.classList.add('online'); el.innerHTML = '<i class="bi bi-cloud-check-fill"></i> Tersambung'; }
+      else { el.classList.add('offline'); el.innerHTML = '<i class="bi bi-cloud-slash-fill"></i> Mode Lokal'; }
+    }
+
+    function normalizeOrder(p) {
+      if (!p || typeof p !== 'object') return null;
+      return {
+        ...p,
+        id_pesanan: p.id_pesanan ?? p.idPesanan ?? p.order_id ?? p.id ?? '',
+        id_event: p.id_event ?? p.idEvent ?? '',
+        id_tiket: p.id_tiket ?? p.idTiket ?? '',
+        nama_pemesan: p.nama_pemesan ?? p.namaPemesan ?? p.nama ?? '',
+        email: String(p.email ?? '').trim(),
+        hp: p.hp ?? p.no_hp ?? p.nomor_hp ?? '',
+        jumlah: Number(p.jumlah ?? p.qty ?? 0) || 0,
+        total_harga: Number(p.total_harga ?? p.total ?? p.totalHarga ?? 0) || 0,
+        status: p.status ?? 'Menunggu',
+        tgl_pesan: p.tgl_pesan ?? p.tanggal_pesan ?? p.tglPesan ?? p.created_at ?? ''
+      };
+    }
+
+    function applyServerData(data) {
+      const source = (data && data.data && typeof data.data === 'object') ? data.data : (data || {});
+
+      if (Array.isArray(source.events)) {
+        events = source.events;
+      }
+
+      if (Array.isArray(source.tikets)) {
+        tikets = source.tikets.map(t => ({
+          ...t,
+          harga: Number(t.harga) || 0,
+          kuota: Number(t.kuota) || 0
+        }));
+      }
+
+      const serverOrders = Array.isArray(source.pesanan)
+        ? source.pesanan
+        : (Array.isArray(source.orders) ? source.orders : null);
+
+      if (serverOrders !== null) {
+        const normalized = serverOrders.map(normalizeOrder).filter(p => p && p.id_pesanan);
+        const byId = new Map(pesanan.map(p => [String(p.id_pesanan), normalizeOrder(p)]));
+        normalized.forEach(p => byId.set(String(p.id_pesanan), p));
+        pesanan = Array.from(byId.values()).filter(Boolean);
+      }
+
+      persistLocalCache();
+    }
+
+    async function syncFromServer() {
+      const data = await fetchAPI('getData');
+      if (data.success) {
+        applyServerData(data);
+        renderEventList(document.getElementById('search-event') ? document.getElementById('search-event').value : '');
+        if (document.getElementById('riwayat-page').classList.contains('active')) renderRiwayat();
+      }
+    }
+
+    function persistLocalCache() {
+      localStorage.setItem('tf_events', JSON.stringify(events));
+      localStorage.setItem('tf_tikets', JSON.stringify(tikets));
+      localStorage.setItem('tf_pesanan', JSON.stringify(pesanan));
+      localStorage.setItem('tf_user', JSON.stringify(currentUser));
+    }
+
+    let currentUser = JSON.parse(localStorage.getItem('tf_user')) || null;
+
+    let events = JSON.parse(localStorage.getItem('tf_events')) || [
+      { id_event: 'EVT-001', nama_event: 'Jakarta Soundwave 2026', tanggal: '2026-10-15', lokasi: 'GBK Senayan, Jakarta', deskripsi: 'Festival musik internasional tahunan menghadirkan puluhan musisi papan atas lintas genre dengan panggung megah.', gambar: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80', status: 'Aktif' },
+      { id_event: 'EVT-002', nama_event: 'Tech Innovators Summit', tanggal: '2026-11-05', lokasi: 'ICE BSD, Tangerang', deskripsi: 'Konferensi teknologi & startup terbesar untuk mendiskusikan inovasi AI, Web3, dan masa depan industri digital.', gambar: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80', status: 'Aktif' },
+      { id_event: 'EVT-003', nama_event: 'Indie Music Fest', tanggal: '2026-12-01', lokasi: 'Lapangan Saparua, Bandung', deskripsi: 'Ajang penampilan band indie lokal ternama dengan bazaar makanan kreatif dan pameran karya seni.', gambar: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80', status: 'Nonaktif' }
+    ];
+
+    let tikets = JSON.parse(localStorage.getItem('tf_tikets')) || [
+      { id_tiket: 'TKT-001', id_event: 'EVT-001', nama_tiket: 'VIP Pass (Day 1)', harga: 750000, kuota: 45, deskripsi: 'Akses panggung depan + Official Merchandise + Free Snack & Drink', status: 'Aktif' },
+      { id_tiket: 'TKT-002', id_event: 'EVT-001', nama_tiket: 'Presale Festival', harga: 350000, kuota: 120, deskripsi: 'Akses area berdiri reguler di venue utama', status: 'Aktif' },
+      { id_tiket: 'TKT-003', id_event: 'EVT-002', nama_tiket: 'Conference Pass', harga: 500000, kuota: 80, deskripsi: 'Sertifikat Digital + Lunch Buffet + Networking Lounge', status: 'Aktif' }
+    ];
+
+    let pesanan = JSON.parse(localStorage.getItem('tf_pesanan')) || [
+      { id_pesanan: "ORD1001", id_event: "EVT-001", id_tiket: "TKT-001", nama_pemesan: "Budi Santoso", email: "budi@gmail.com", hp: "081234567890", jumlah: 2, total_harga: 1500000, status: "Lunas", tgl_pesan: "2026-09-10 10:30" }
+    ];
+
+    function saveData() { persistLocalCache(); }
+
+    const modalPemesananBS = new bootstrap.Modal(document.getElementById('modalPemesanan'));
+    const modalDetailBS = new bootstrap.Modal(document.getElementById('modalDetailPesanan'));
+
+    function showToast(message, type = 'success') {
+      const toastEl = document.getElementById('appToast');
+      const toastMsg = document.getElementById('toast-message');
+      const icon = type === 'success' ? 'bi-check-circle-fill text-success' : 'bi-exclamation-triangle-fill text-danger';
+      toastMsg.innerHTML = `<i class="bi ${icon} fs-5"></i> <span>${message}</span>`;
+      const toast = new bootstrap.Toast(toastEl);
+      toast.show();
+    }
+
+    function formatRupiah(angka) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
+    }
+
+    function navigateTo(pageId) {
+      document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      document.querySelectorAll('.navbar-nav .nav-link').forEach(link => link.classList.remove('active'));
+      if (pageId === 'beranda-page') document.getElementById('nav-beranda').classList.add('active');
+      if (pageId === 'riwayat-page') {
+        document.getElementById('nav-riwayat').classList.add('active');
+        renderRiwayat();
+        syncFromServer().catch(() => {});
+      }
+      window.scrollTo(0, 0);
+    }
+
+    function renderNavbarUser() {
+      const navSection = document.getElementById('user-nav-section');
+      if (currentUser) {
+        navSection.innerHTML = `
+          <div class="dropdown">
+            <button class="btn btn-light rounded-pill dropdown-toggle d-flex align-items-center gap-2 border" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle fs-5 text-primary"></i><span>${currentUser.nama}</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+              <li><a class="dropdown-item" href="#" onclick="navigateTo('riwayat-page')"><i class="bi bi-ticket-detailed me-2"></i>Tiket Saya</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="#" onclick="handleLogout()"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
+            </ul>
+          </div>`;
+      } else {
+        navSection.innerHTML = `<button class="btn btn-outline-primary rounded-pill px-4" onclick="navigateTo('login-page')">Masuk / Daftar</button>`;
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      currentUser = { nama: email.split('@')[0], email: email, hp: "081234567890" };
+      saveData();
+      renderNavbarUser();
+      showToast("Berhasil masuk! Selamat datang.");
+      navigateTo('beranda-page');
+    }
+
+    function handleRegister(e) {
+      e.preventDefault();
+      currentUser = {
+        nama: document.getElementById('reg-nama').value,
+        email: document.getElementById('reg-email').value,
+        hp: document.getElementById('reg-hp').value
+      };
+      saveData();
+      renderNavbarUser();
+      showToast("Pendaftaran akun berhasil!");
+      navigateTo('beranda-page');
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      localStorage.removeItem('tf_user');
+      renderNavbarUser();
+      showToast("Anda telah keluar akun.", "danger");
+      navigateTo('beranda-page');
+    }
+
+    function renderEventList(filterKeyword = "") {
+      const container = document.getElementById('event-grid-list');
+      const activeEvents = events.filter(ev => ev.status === 'Aktif' && ev.nama_event.toLowerCase().includes(filterKeyword.toLowerCase()));
+      document.getElementById('count-event').innerText = `${activeEvents.length} Event Tersedia`;
+
+      if (activeEvents.length === 0) {
+        container.innerHTML = `
+          <div class="col-12 text-center py-5">
+            <i class="bi bi-calendar-x display-1 text-muted"></i>
+            <p class="mt-3 text-muted">Tidak ada event aktif yang ditemukan.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = activeEvents.map(ev => {
+        const eventTikets = tikets.filter(t => t.id_event === ev.id_event);
+        const hargaMin = eventTikets.length > 0 ? Math.min(...eventTikets.map(t => t.harga)) : 0;
+        const gambar = ev.gambar || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80';
+        return `
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card card-event h-100 shadow-sm overflow-hidden">
+              <img src="${gambar}" class="card-img-top" alt="${ev.nama_event}" style="height: 180px; object-fit: cover;">
+              <div class="card-body d-flex flex-column">
+                <span class="badge bg-primary-subtle text-primary mb-2 align-self-start rounded-pill px-3"><i class="bi bi-calendar-event me-1"></i> ${ev.tanggal}</span>
+                <h5 class="card-title fw-bold text-dark fs-6 fs-md-5">${ev.nama_event}</h5>
+                <p class="card-text text-muted small"><i class="bi bi-geo-alt text-danger me-1"></i> ${ev.lokasi}</p>
+                <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                  <div><span class="text-muted small d-block">Mulai dari</span><span class="fw-bold text-primary fs-6">${formatRupiah(hargaMin)}</span></div>
+                  <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="showDetailEvent('${ev.id_event}')">Beli Tiket</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function filterEvents() {
+      renderEventList(document.getElementById('search-event').value);
+    }
+
+    function showDetailEvent(id_event) {
+      const ev = events.find(e => e.id_event === id_event);
+      if (!ev) return;
+      const listTiket = tikets.filter(t => t.id_event === id_event && t.status !== 'Nonaktif');
+      const container = document.getElementById('detail-event-wrapper');
+      const gambar = ev.gambar || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80';
+
+      container.innerHTML = `
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+            <img src="${gambar}" class="w-100" style="max-height: 350px; object-fit: cover;">
+            <div class="card-body p-4">
+              <h2 class="fw-bold fs-3">${ev.nama_event}</h2>
+              <div class="d-flex flex-wrap gap-3 my-3 text-muted small">
+                <div><i class="bi bi-calendar-check text-primary me-2"></i>${ev.tanggal}</div>
+                <div><i class="bi bi-geo-alt text-danger me-2"></i>${ev.lokasi}</div>
+              </div>
+              <h6 class="fw-bold mt-4">Deskripsi Acara</h6>
+              <p class="text-secondary small leading-relaxed">${ev.deskripsi}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white py-3 border-bottom-0">
+              <h5 class="fw-bold mb-0 fs-6"><i class="bi bi-ticket-perforated me-2 text-primary"></i>Pilih Kategori Tiket</h5>
+            </div>
+            <div class="card-body p-4 pt-0">
+              <div class="d-flex flex-column gap-3">
+                ${listTiket.map(t => `
+                  <div class="border rounded-3 p-3 d-flex justify-content-between align-items-center">
+                    <div>
+                      <div class="text-muted small">ID Tiket: ${t.id_tiket}</div>
+                      <h6 class="fw-bold mb-1">${t.nama_tiket}</h6>
+                      <div class="text-primary fw-bold mb-1">${formatRupiah(t.harga)}</div>
+                      <span class="badge ${t.kuota > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">${t.kuota > 0 ? `Kuota: ${t.kuota}` : 'Habis'}</span>
+                    </div>
+                    <button class="btn btn-primary rounded-pill px-3" ${t.kuota <= 0 ? 'disabled' : ''} onclick="bukaModalPesan('${ev.id_event}', '${t.id_tiket}')">
+                      ${t.kuota > 0 ? 'Pilih' : 'Sold Out'}
+                    </button>
+                  </div>`).join('') || '<p class="text-muted small mb-0">Belum ada tiket untuk event ini.</p>'}
+              </div>
+            </div>
+          </div>
+        </div>`;
+      navigateTo('detail-page');
+    }
+
+    function bukaModalPesan(id_event, id_tiket) {
+      if (!currentUser) {
+        showToast("Silakan login terlebih dahulu untuk memesan tiket.", "danger");
+        navigateTo('login-page');
+        return;
+      }
+      const ev = events.find(e => e.id_event === id_event);
+      const t = tikets.find(tk => tk.id_tiket === id_tiket);
+
+      document.getElementById('order-id-event').value = ev.id_event;
+      document.getElementById('order-id-tiket').value = t.id_tiket;
+      document.getElementById('order-nama-event').innerText = ev.nama_event;
+      document.getElementById('order-jenis-tiket').innerText = `Kategori: ${t.nama_tiket} (${t.id_tiket})`;
+      document.getElementById('order-harga-satuan').innerText = formatRupiah(t.harga);
+
+      document.getElementById('order-nama-pemesan').value = currentUser.nama;
+      document.getElementById('order-email').value = currentUser.email;
+      document.getElementById('order-hp').value = currentUser.hp;
+      document.getElementById('order-jumlah').value = 1;
+      document.getElementById('order-jumlah').max = t.kuota;
+
+      hitungTotalPesan();
+      modalPemesananBS.show();
+    }
+
+    function hitungTotalPesan() {
+      const id_tiket = document.getElementById('order-id-tiket').value;
+      const t = tikets.find(tk => tk.id_tiket === id_tiket);
+      let jml = parseInt(document.getElementById('order-jumlah').value) || 1;
+      if (jml > t.kuota) {
+        jml = t.kuota;
+        document.getElementById('order-jumlah').value = t.kuota;
+      }
+      document.getElementById('order-total-harga').innerText = formatRupiah(jml * t.harga);
+    }
+
+    async function prosesPemesanan(e) {
+      e.preventDefault();
+
+      const id_event = document.getElementById('order-id-event').value;
+      const id_tiket = document.getElementById('order-id-tiket').value;
+      const jumlah = parseInt(document.getElementById('order-jumlah').value) || 0;
+      const t = tikets.find(tk => tk.id_tiket === id_tiket);
+
+      if (!t) {
+        showToast("Data tiket tidak ditemukan.", "danger");
+        return;
+      }
+
+      if (jumlah < 1) {
+        showToast("Jumlah tiket minimal 1.", "danger");
+        return;
+      }
+
+      if (t.kuota < jumlah) {
+        showToast("Kuota tiket tidak mencukupi!", "danger");
+        return;
+      }
+
+      const payload = {
+        id_event,
+        id_tiket,
+        jumlah,
+        nama_pemesan: document.getElementById('order-nama-pemesan').value.trim(),
+        email: document.getElementById('order-email').value.trim(),
+        hp: document.getElementById('order-hp').value.trim(),
+        total_harga: jumlah * Number(t.harga || 0)
+      };
+
+      t.kuota -= jumlah;
+
+      const response = await fetchAPI('createPesanan', payload);
+
+      if (response.success) {
+        applyServerData(response);
+        showToast("Pemesanan berhasil dikirim!");
+      } else {
+        const newId = "ORD-" + Math.floor(1000 + Math.random() * 9000);
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0] + ' ' + now.toTimeString().split(' ')[0].substring(0, 5);
+
+        const orderLokal = normalizeOrder({
+          id_pesanan: newId,
+          id_event,
+          id_tiket,
+          nama_pemesan: payload.nama_pemesan,
+          email: payload.email,
+          hp: payload.hp,
+          jumlah: payload.jumlah,
+          total_harga: payload.total_harga,
+          status: "Menunggu",
+          tgl_pesan: dateStr
+        });
+
+        pesanan.unshift(orderLokal);
+        showToast("Pesanan dibuat (Mode Lokal)");
+      }
+
+      saveData();
+      modalPemesananBS.hide();
+      navigateTo('riwayat-page');
+    }
+
+    async function ubahStatusPesanan(id_pesanan, statusBaru) {
+      const idx = pesanan.findIndex(p => String(p.id_pesanan) === String(id_pesanan));
+      if (idx !== -1) {
+        pesanan[idx].status = statusBaru;
+        saveData();
+
+        const response = await fetchAPI('updateStatusPesanan', { id_pesanan, status: statusBaru });
+        if (response.success) {
+          applyServerData(response);
+        }
+
+        showToast(`Status ID ${id_pesanan} berhasil diubah menjadi ${statusBaru}`);
+        renderRiwayat(document.getElementById('search-riwayat') ? document.getElementById('search-riwayat').value : '');
+        
+        // JIKA DIUBAH MENJADI LUNAS, KITA RE-RENDER MODAL UNTUK LANGSUNG MENAMPILKAN BARCODE
+        if (statusBaru === 'Lunas') {
+          lihatDetailPesanan(id_pesanan);
+        } else {
+          modalDetailBS.hide();
+        }
+      }
+    }
+
+    function renderRiwayat(keyword = "") {
+      const tbody = document.getElementById('table-riwayat-body');
+      if (!tbody) return;
+
+      const filtered = pesanan.filter(p => {
+        const search = keyword.toLowerCase();
+        const ev = events.find(e => e.id_event === p.id_event) || {};
+        return (
+          p.id_pesanan.toLowerCase().includes(search) ||
+          p.nama_pemesan.toLowerCase().includes(search) ||
+          p.email.toLowerCase().includes(search) ||
+          (ev.nama_event && ev.nama_event.toLowerCase().includes(search))
+        );
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              Tidak ada data riwayat pesanan yang ditemukan.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(p => {
+        const ev = events.find(e => e.id_event === p.id_event) || { nama_event: 'Event Tidak Ditemukan', lokasi: '-' };
+        const tk = tikets.find(t => t.id_tiket === p.id_tiket) || { nama_tiket: 'Kategori -', harga: 0 };
+
+        let statusBadge = 'bg-warning-subtle text-warning';
+        if (p.status === 'Lunas') statusBadge = 'bg-success-subtle text-success';
+        if (p.status === 'Batal') statusBadge = 'bg-danger-subtle text-danger';
+
+        return `
+          <tr>
+            <td data-label="ID Pesanan" class="ps-3 fw-bold text-primary">${p.id_pesanan}</td>
+            <td data-label="Detail Event">
+              <div class="fw-bold">${ev.nama_event}</div>
+              <small class="text-muted"><i class="bi bi-geo-alt"></i> ${ev.lokasi}</small>
+            </td>
+            <td data-label="ID Tiket & Kategori">
+              <span class="badge bg-light text-dark border me-1">${p.id_tiket}</span> 
+              <span>${tk.nama_tiket}</span> 
+              <span class="badge bg-secondary ms-1">x${p.jumlah}</span>
+            </td>
+            <td data-label="Pemesan">
+              <div class="fw-bold">${p.nama_pemesan}</div>
+              <small class="text-muted d-block"><i class="bi bi-envelope"></i> ${p.email}</small>
+              <small class="text-muted d-block"><i class="bi bi-telephone"></i> ${p.hp}</small>
+            </td>
+            <td data-label="Tgl Pesan"><small class="text-muted"><i class="bi bi-clock"></i> ${p.tgl_pesan}</small></td>
+            <td data-label="Total" class="fw-bold">${formatRupiah(p.total_harga)}</td>
+            <td data-label="Status"><span class="badge badge-status ${statusBadge}">${p.status}</span></td>
+            <td data-label="Aksi" class="text-end pe-3 td-actions">
+              <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="lihatDetailPesanan('${p.id_pesanan}')">
+                <i class="bi bi-eye"></i> Detail
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function filterRiwayat() {
+      const kw = document.getElementById('search-riwayat').value;
+      renderRiwayat(kw);
+    }
+
+    function lihatDetailPesanan(id_pesanan) {
+      const p = pesanan.find(item => String(item.id_pesanan) === String(id_pesanan));
+      if (!p) return;
+
+      const ev = events.find(e => e.id_event === p.id_event) || {};
+      const tk = tikets.find(t => t.id_tiket === p.id_tiket) || {};
+
+      const content = document.getElementById('detail-pesanan-content');
+      content.innerHTML = `
+        <div class="text-center mb-4">
+          <div class="text-muted small">ID TRK / TIKET</div>
+          <h4 class="fw-bold text-primary mb-1">${p.id_pesanan}</h4>
+          <span class="badge ${p.status === 'Lunas' ? 'bg-success' : p.status === 'Batal' ? 'bg-danger' : 'bg-warning text-dark'} px-3 py-2 rounded-pill">${p.status}</span>
+        </div>
+
+        <!-- AREA BARCODE / QR CODE (OTOMATIS TAMPIL JIKA STATUS LUNAS) -->
+        ${p.status === 'Lunas' ? `
+          <div class="text-center my-3 p-3 bg-light rounded-3 border">
+            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-qr-code-scan me-1"></i> Barcode Tiket Anda</h6>
+            <div id="qrcode-container" class="d-flex justify-content-center my-2"></div>
+            <small class="text-muted d-block" style="font-size: 0.8rem;">Tunjukkan Barcode/QR Code ini kepada petugas kasir saat masuk venue.</small>
+          </div>
+        ` : ''}
+
+        <div class="border-top border-bottom py-3 mb-3">
+          <h6 class="fw-bold text-dark mb-2">Informasi Event</h6>
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted small">Nama Event:</span><span class="fw-semibold small">${ev.nama_event || '-'}</span></div>
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted small">Tanggal:</span><span class="fw-semibold small">${ev.tanggal || '-'}</span></div>
+          <div class="d-flex justify-content-between"><span class="text-muted small">Lokasi:</span><span class="fw-semibold small">${ev.lokasi || '-'}</span></div>
+        </div>
+        <div class="border-bottom pb-3 mb-3">
+          <h6 class="fw-bold text-dark mb-2">Detail Pemesan</h6>
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted small">Nama:</span><span class="fw-semibold small">${p.nama_pemesan}</span></div>
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted small">Email:</span><span class="fw-semibold small">${p.email}</span></div>
+          <div class="d-flex justify-content-between"><span class="text-muted small">No. WhatsApp:</span><span class="fw-semibold small">${p.hp}</span></div>
+        </div>
+        <div class="bg-light p-3 rounded-3 mb-3">
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted small">Kategori Tiket:</span><span class="fw-bold small">${tk.nama_tiket || p.id_tiket}</span></div>
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted small">Jumlah:</span><span class="fw-bold small">${p.jumlah} Tiket</span></div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold">Total Harga</span>
+            <span class="fw-bold text-primary fs-5">${formatRupiah(p.total_harga)}</span>
+          </div>
+        </div>
+
+        <!-- FITUR PROSES PEMBAYARAN LUNAS ATAU BATAL DARI DETAIL PESANAN -->
+        ${p.status === 'Menunggu' ? `
+          <div class="d-grid gap-2">
+            <button class="btn btn-success rounded-3 fw-bold py-2" onclick="ubahStatusPesanan('${p.id_pesanan}', 'Lunas')">
+              <i class="bi bi-check-circle me-1"></i> Bayar Lunas Sekarang
+            </button>
+            <button class="btn btn-outline-danger rounded-3 fw-bold py-2" onclick="ubahStatusPesanan('${p.id_pesanan}', 'Batal')">
+              <i class="bi bi-x-circle me-1"></i> Batalkan Pesanan
+            </button>
+          </div>
+        ` : ''}`;
+
+      modalDetailBS.show();
+
+      // GENERATE TAMPILAN BARCODE SECARA OTOMATIS JIKA STATUS LUNAS
+      if (p.status === 'Lunas') {
+        setTimeout(() => {
+          const qrContainer = document.getElementById('qrcode-container');
+          if (qrContainer) {
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+              text: p.id_pesanan,
+              width: 128,
+              height: 128
+            });
+          }
+        }, 200);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Cek Sesi Akses Aplikasi Utama
+      if (sessionStorage.getItem('app_logged_in') === 'true') {
+        document.getElementById('app-auth-overlay').style.display = 'none';
+      }
+
+      renderNavbarUser();
+      renderEventList();
+      syncFromServer().catch(() => {});
+      setInterval(() => syncFromServer().catch(() => {}), SYNC_INTERVAL_MS);
+    });
+  </script>
+</body>
+</html>
